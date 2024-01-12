@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+        <title>login</title>
+        <script>
+            document.addEventListener("htmx:configRequest", (event) => {
+                event.detail.headers["Authorization"] = `Bearer ${localStorage.getItem('key')}`;
+            });
+        </script>
+    </head>
+    <body>
+        <form hx-post="/login" hx-on::after-request="localStorage.setItem('key', event.detail.xhr.response)">
+            <input type="text" name="name"></input>
+            <button>login</button>
+        </form>
+    </body>
+</html>
