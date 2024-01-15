@@ -68,16 +68,14 @@ func Socket(w http.ResponseWriter, r *http.Request) {
 			log.Printf("RD: %v", err)
 			return
 		}
-		sct := &Message{}
-		json.Unmarshal(p, sct)
-		if sct.Text == "" {
+		msg := &Message{}
+		json.Unmarshal(p, msg)
+		if msg.Text == "" {
 			continue
 		}
-		if err != nil {
-			w.WriteHeader(401)
-		}
+		msg.UserId = userId
 		for _, v := range clients {
-			v.messages <- Message{UserId: userId, Text: sct.Text}
+			v.messages <- *msg
 		}
 	}
 }

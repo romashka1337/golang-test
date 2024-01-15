@@ -9,12 +9,6 @@ import (
 	"test-proj/chat"
 )
 
-func checkToken(authHdr string) (*auth.Cred, error) {
-	authStr := strings.ReplaceAll(authHdr, "Bearer ", "")
-	cred, err := auth.ValidateToken(authStr)
-	return cred, err
-}
-
 func authMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer next.ServeHTTP(w, r)
@@ -27,7 +21,8 @@ func authMiddleware(next http.Handler) http.Handler {
 			return
 		}
 		r.Form = url.Values{}
-		cred, err := checkToken(authHdr[0])
+		authStr := strings.ReplaceAll(authHdr[0], "Bearer ", "")
+		cred, err := auth.ValidateToken(authStr)
 		r.Form.Set("auth", cred.UserId)
 		if err != nil {
 			w.WriteHeader(401)
