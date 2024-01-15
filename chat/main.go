@@ -21,16 +21,16 @@ type Message struct {
 }
 
 type Client struct {
-	Messages chan Message
+	messages chan Message
 }
 
 var clients = make(map[string]Client)
 
-func handleMessages(conn *websocket.Conn, user string) {
-	defer close(clients[user].Messages)
+func handlemessages(conn *websocket.Conn, user string) {
+	defer close(clients[user].messages)
 	for {
 		select {
-		case msg := <-clients[user].Messages:
+		case msg := <-clients[user].messages:
 			if msg.Text == "close" {
 				return
 			}
@@ -55,12 +55,12 @@ func Socket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	userId := r.FormValue("auth")
-	clients[userId] = Client{Messages: make(chan Message)}
+	clients[userId] = Client{messages: make(chan Message)}
 	defer func() {
-		clients[userId].Messages <- Message{Text: "close"}
+		clients[userId].messages <- Message{Text: "close"}
 		delete(clients, userId)
 	}()
-	go handleMessages(conn, userId)
+	go handlemessages(conn, userId)
 	for {
 		_, p, err := conn.ReadMessage()
 		if err != nil {
@@ -77,7 +77,7 @@ func Socket(w http.ResponseWriter, r *http.Request) {
 		}
 
 		for _, v := range clients {
-			v.Messages <- Message{UserId: userId, Text: sct.Text}
+			v.messages <- Message{UserId: userId, Text: sct.Text}
 		}
 	}
 }
