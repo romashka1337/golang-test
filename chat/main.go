@@ -28,11 +28,6 @@ type Client struct {
 var clients = make(map[string]Client)
 
 func handlemessages(conn *websocket.Conn, user string) {
-	defer func() {
-		if recover() == nil {
-			return
-		}
-	}()
 	for {
 		select {
 		case msg := <-clients[user].messages:
