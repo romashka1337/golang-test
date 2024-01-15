@@ -18,6 +18,7 @@ var upgrader = websocket.Upgrader{
 type Message struct {
 	UserId string
 	Text   string
+	Close  bool
 }
 
 type Client struct {
@@ -27,21 +28,25 @@ type Client struct {
 var clients = make(map[string]Client)
 
 func handlemessages(conn *websocket.Conn, user string) {
-	defer close(clients[user].messages)
+	defer func() {
+		if recover() == nil {
+			return
+		}
+	}()
 	for {
 		select {
 		case msg := <-clients[user].messages:
-			if msg.Text == "close" {
+			if msg.Close {
 				return
 			}
 			tmpl, _ := template.ParseFiles("html/message.html")
 			var res bytes.Buffer
 			if err := tmpl.Execute(&res, msg); err != nil {
-				log.Println(err)
+				log.Printf("Ex: %v", err)
 				return
 			}
 			if err := conn.WriteMessage(1, []byte(res.String())); err != nil {
-				log.Println(err)
+				log.Printf("Wm: %v", err)
 				return
 			}
 		}
@@ -57,14 +62,15 @@ func Socket(w http.ResponseWriter, r *http.Request) {
 	userId := r.FormValue("auth")
 	clients[userId] = Client{messages: make(chan Message)}
 	defer func() {
-		clients[userId].messages <- Message{Text: "close"}
+		clients[userId].messages <- Message{Close: true}
+		close(clients[userId].messages)
 		delete(clients, userId)
 	}()
 	go handlemessages(conn, userId)
 	for {
 		_, p, err := conn.ReadMessage()
 		if err != nil {
-			log.Println(err)
+			log.Printf("RD: %v", err)
 			return
 		}
 		sct := &Message{}
@@ -75,7 +81,6 @@ func Socket(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			w.WriteHeader(401)
 		}
-
 		for _, v := range clients {
 			v.messages <- Message{UserId: userId, Text: sct.Text}
 		}
